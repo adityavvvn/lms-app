@@ -3,11 +3,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const User = require('./models/User');
-const Category = require('./models/Category');
-const Subcategory = require('./models/Subcategory');
-const Course = require('./models/Course');
-const Progress = require('./models/Progress');
 require('dotenv').config();
 
 const app = express();
@@ -46,8 +41,8 @@ const subcategorySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-// Remove duplicate schemas and use the ones from models/
-const User = mongoose.model('User', userSchema);
+// Model declarations
+const User = require('./models/User');
 const Category = mongoose.model('Category', categorySchema);
 const Subcategory = mongoose.model('Subcategory', subcategorySchema);
 const Course = require('./models/Course');
