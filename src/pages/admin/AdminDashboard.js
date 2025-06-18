@@ -286,17 +286,124 @@ function AdminDashboard() {
     setOpenDialog(true);
   };
 
-  const handleEditChapter = (course, chapter) => {
+  const handleEditChapter = (course, chapter, chapterIndex) => {
     setSelectedCourse(course);
     setChapterData({
+      _id: chapter._id,
       title: chapter.title,
       description: chapter.description,
       videoUrl: chapter.videoUrl,
-      order: chapter.order,
+      order: chapter.order || chapterIndex + 1,
       duration: chapter.duration || '',
     });
     setDialogType('chapter');
     setOpenDialog(true);
+  };
+
+  const handleAddChapter = (course) => {
+    setSelectedCourse(course);
+    setChapterData({
+      title: '',
+      description: '',
+      videoUrl: '',
+      order: course.chapters.length + 1,
+      duration: '',
+    });
+    setDialogType('chapter');
+    setOpenDialog(true);
+  };
+
+  const handleChapterSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    try {
+      setLoading(true);
+      
+      const updatedChapters = [...selectedCourse.chapters];
+      
+      if (chapterData._id) {
+        // Edit existing chapter
+        const chapterIndex = updatedChapters.findIndex(ch => ch._id === chapterData._id);
+        if (chapterIndex !== -1) {
+          updatedChapters[chapterIndex] = { ...chapterData };
+        }
+      } else {
+        // Add new chapter
+        updatedChapters.push({
+          ...chapterData,
+          _id: Date.now().toString(), // Temporary ID for frontend
+        });
+      }
+
+      // Sort chapters by order
+      updatedChapters.sort((a, b) => a.order - b.order);
+
+      const response = await authAxios.put(`/api/courses/${selectedCourse._id}`, {
+        name: selectedCourse.name,
+        description: selectedCourse.description,
+        categoryId: selectedCourse.categoryId._id || selectedCourse.categoryId,
+        subcategoryId: selectedCourse.subcategoryId._id || selectedCourse.subcategoryId,
+        thumbnail: selectedCourse.thumbnail,
+        chapters: updatedChapters,
+      });
+
+      // Update the course in the list
+      setCourses(courses.map(course => 
+        course._id === selectedCourse._id ? response.data : course
+      ));
+
+      setOpenDialog(false);
+      setChapterData({
+        title: '',
+        description: '',
+        videoUrl: '',
+        order: 1,
+        duration: '',
+      });
+    } catch (err) {
+      console.error('Error updating chapters:', err);
+      setError(err.response?.data?.message || 'Failed to update chapters');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveChapter = async (course, chapterId) => {
+    try {
+      setLoading(true);
+      
+      const updatedChapters = selectedCourse.chapters.filter(ch => ch._id !== chapterId);
+      
+      const response = await authAxios.put(`/api/courses/${course._id}`, {
+        name: course.name,
+        description: course.description,
+        categoryId: course.categoryId._id || course.categoryId,
+        subcategoryId: course.subcategoryId._id || course.subcategoryId,
+        thumbnail: course.thumbnail,
+        chapters: updatedChapters,
+      });
+
+      // Update the course in the list
+      setCourses(courses.map(c => c._id === course._id ? response.data : c));
+    } catch (err) {
+      console.error('Error removing chapter:', err);
+      setError(err.response?.data?.message || 'Failed to remove chapter');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChapterDataChange = (field, value) => {
+    setChapterData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const validateYouTubeUrl = (url) => {
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
+    return youtubeRegex.test(url);
   };
 
   const calculateStudentProgress = (course, studentId) => {
@@ -311,51 +418,269 @@ function AdminDashboard() {
   };
 
   const renderDialogContent = () => {
-    if (!selectedCourse) return null;
-
-    return (
-      <Box sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          {selectedCourse.name} - Student Progress
-        </Typography>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Student</TableCell>
-                <TableCell>Progress</TableCell>
-                <TableCell>Last Accessed</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {selectedCourse.enrolledStudents
-                .filter(enrollment => enrollment && enrollment.student)
-                .map((enrollment) => (
-                <TableRow key={enrollment.student._id}>
-                  <TableCell>{enrollment.student.name}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Box sx={{ width: '100%', mr: 1 }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={calculateStudentProgress(selectedCourse, enrollment.student._id)} 
-                        />
-                      </Box>
-                      <Box sx={{ minWidth: 35 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          {`${Math.round(calculateStudentProgress(selectedCourse, enrollment.student._id))}%`}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    {enrollment.lastAccessed ? new Date(enrollment.lastAccessed).toLocaleDateString() : 'N/A'}
-                  </TableCell>
+    if (dialogType === 'analytics' && selectedCourse) {
+      return (
+        <Box sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            {selectedCourse.name} - Student Progress
+          </Typography>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Student</TableCell>
+                  <TableCell>Progress</TableCell>
+                  <TableCell>Last Accessed</TableCell>
                 </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedCourse.enrolledStudents
+                  .filter(enrollment => enrollment && enrollment.student)
+                  .map((enrollment) => (
+                  <TableRow key={enrollment.student._id}>
+                    <TableCell>{enrollment.student.name}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ width: '100%', mr: 1 }}>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={calculateStudentProgress(selectedCourse, enrollment.student._id)} 
+                          />
+                        </Box>
+                        <Box sx={{ minWidth: 35 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            {`${Math.round(calculateStudentProgress(selectedCourse, enrollment.student._id))}%`}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      {enrollment.lastAccessed ? new Date(enrollment.lastAccessed).toLocaleDateString() : 'N/A'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      );
+    }
+
+    if (dialogType === 'chapter') {
+      return (
+        <Box component="form" onSubmit={handleChapterSubmit} sx={{ mt: 2 }}>
+          <TextField
+            fullWidth
+            label="Chapter Title"
+            value={chapterData.title}
+            onChange={(e) => handleChapterDataChange('title', e.target.value)}
+            required
+            margin="normal"
+          />
+          <TextField
+            fullWidth
+            label="Description"
+            value={chapterData.description}
+            onChange={(e) => handleChapterDataChange('description', e.target.value)}
+            margin="normal"
+            multiline
+            rows={2}
+          />
+          <TextField
+            fullWidth
+            label="YouTube Video URL"
+            value={chapterData.videoUrl}
+            onChange={(e) => handleChapterDataChange('videoUrl', e.target.value)}
+            required
+            margin="normal"
+            helperText="Enter a valid YouTube URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID)"
+            error={chapterData.videoUrl && !validateYouTubeUrl(chapterData.videoUrl)}
+          />
+          <TextField
+            fullWidth
+            label="Order"
+            type="number"
+            value={chapterData.order}
+            onChange={(e) => handleChapterDataChange('order', parseInt(e.target.value) || 1)}
+            required
+            margin="normal"
+            inputProps={{ min: 1 }}
+          />
+          <TextField
+            fullWidth
+            label="Duration (e.g., 15:30)"
+            value={chapterData.duration}
+            onChange={(e) => handleChapterDataChange('duration', e.target.value)}
+            margin="normal"
+            helperText="Optional: Video duration in MM:SS format"
+          />
+        </Box>
+      );
+    }
+
+    // Form for categories, subcategories, and courses
+    return (
+      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+        <TextField
+          fullWidth
+          label="Name"
+          name="name"
+          value={formData.name}
+          onChange={handleFormChange}
+          required
+          margin="normal"
+        />
+        <TextField
+          fullWidth
+          label="Description"
+          name="description"
+          value={formData.description}
+          onChange={handleFormChange}
+          required
+          margin="normal"
+          multiline
+          rows={3}
+        />
+        
+        {dialogType === 'subcategory' && (
+          <FormControl fullWidth margin="normal" required>
+            <InputLabel>Category</InputLabel>
+            <Select
+              name="categoryId"
+              value={formData.categoryId}
+              onChange={handleFormChange}
+              label="Category"
+            >
+              {categories.map((category) => (
+                <MenuItem key={category._id} value={category._id}>
+                  {category.name}
+                </MenuItem>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </Select>
+          </FormControl>
+        )}
+
+        {dialogType === 'course' && (
+          <>
+            <FormControl fullWidth margin="normal" required>
+              <InputLabel>Category</InputLabel>
+              <Select
+                name="categoryId"
+                value={formData.categoryId}
+                onChange={handleFormChange}
+                label="Category"
+              >
+                {categories.map((category) => (
+                  <MenuItem key={category._id} value={category._id}>
+                    {category.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Subcategory</InputLabel>
+              <Select
+                name="subcategoryId"
+                value={formData.subcategoryId}
+                onChange={handleFormChange}
+                label="Subcategory"
+                disabled={!formData.categoryId}
+              >
+                {subcategories
+                  .filter(sub => {
+                    if (!formData.categoryId) return true;
+                    const subCategoryId = sub.categoryId._id || sub.categoryId;
+                    return subCategoryId === formData.categoryId;
+                  })
+                  .map((subcategory) => (
+                    <MenuItem key={subcategory._id} value={subcategory._id}>
+                      {subcategory.name}
+                    </MenuItem>
+                  ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              label="Thumbnail URL"
+              name="thumbnail"
+              value={formData.thumbnail}
+              onChange={handleFormChange}
+              margin="normal"
+              helperText="Optional: URL for course thumbnail image"
+            />
+
+            {/* Chapter Management Section */}
+            <Box sx={{ mt: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Chapters</Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => handleAddChapter(selectedCourse)}
+                >
+                  Add Chapter
+                </Button>
+              </Box>
+              
+              {selectedCourse?.chapters?.length > 0 ? (
+                <List dense>
+                  {selectedCourse.chapters
+                    .sort((a, b) => a.order - b.order)
+                    .map((chapter, index) => (
+                    <ListItem
+                      key={chapter._id}
+                      sx={{
+                        border: '1px solid #f0f0f0',
+                        borderRadius: 1,
+                        mb: 1,
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <ListItemText
+                        primary={`${chapter.order}. ${chapter.title}`}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {chapter.description}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Duration: {chapter.duration || 'N/A'} | URL: {chapter.videoUrl}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          onClick={() => handleEditChapter(selectedCourse, chapter, index)}
+                          sx={{ mr: 1 }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          onClick={() => handleRemoveChapter(selectedCourse, chapter._id)}
+                          color="error"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography color="textSecondary" sx={{ textAlign: 'center', py: 2 }}>
+                  No chapters added yet. Click "Add Chapter" to get started.
+                </Typography>
+              )}
+            </Box>
+          </>
+        )}
       </Box>
     );
   };
@@ -520,8 +845,16 @@ function AdminDashboard() {
         {dialogType !== 'analytics' && (
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={handleSubmit} variant="contained" color="primary">
-              {selectedCourse ? 'Save Changes' : 'Add'}
+            <Button 
+              onClick={dialogType === 'chapter' ? handleChapterSubmit : handleSubmit} 
+              variant="contained" 
+              color="primary"
+              disabled={dialogType === 'chapter' && (!chapterData.title || !chapterData.videoUrl || !validateYouTubeUrl(chapterData.videoUrl))}
+            >
+              {dialogType === 'chapter' 
+                ? (chapterData._id ? 'Update Chapter' : 'Add Chapter')
+                : (selectedCourse ? 'Save Changes' : 'Add')
+              }
             </Button>
           </DialogActions>
         )}

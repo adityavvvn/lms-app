@@ -104,9 +104,9 @@ function CourseView() {
 
   const isChapterCompleted = (chapterId) => {
     const enrollment = course.enrolledStudents?.find(
-      (e) => e.student._id === user._id
+      (e) => e && e.student && e.student._id === user._id
     );
-    return enrollment?.progress.completedChapters?.includes(chapterId);
+    return enrollment?.progress?.completedChapters?.includes(chapterId);
   };
 
   return (

@@ -251,49 +251,135 @@ app.delete('/api/categories/:id', isAuth, isAdmin, async (req, res) => {
 });
 
 // Create Subcategory
-app.post('/api/admin/subcategories', isAuth, isAdmin, async (req, res) => {
+app.post('/api/subcategories', isAuth, isAdmin, async (req, res) => {
   try {
+    console.log('Creating subcategory with data:', req.body);
     const { name, description, categoryId } = req.body;
+    
+    // Validate category exists and log its details
+    const category = await Category.findById(categoryId);
+    console.log('Found category:', category);
+    
+    if (!category) {
+      console.error('Category not found:', categoryId);
+      return res.status(400).json({ message: 'Category not found' });
+    }
+
     const subcategory = new Subcategory({
       name,
       description,
-      categoryId,
+      categoryId: category._id, // Ensure we're using the ObjectId
     });
+    
+    console.log('Subcategory before save:', JSON.stringify(subcategory, null, 2));
     await subcategory.save();
-    res.status(201).json(subcategory);
+    
+    const populatedSubcategory = await Subcategory.findById(subcategory._id)
+      .populate('categoryId', 'name');
+    console.log('Created subcategory:', JSON.stringify(populatedSubcategory, null, 2));
+    
+    res.status(201).json(populatedSubcategory);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating subcategory' });
+    console.error('Error creating subcategory:', error);
+    res.status(500).json({ 
+      message: 'Error creating subcategory',
+      error: error.message 
+    });
+  }
+});
+
+app.delete('/api/subcategories/:id', isAuth, isAdmin, async (req, res) => {
+  try {
+    const subcategory = await Subcategory.findByIdAndDelete(req.params.id);
+    if (!subcategory) {
+      return res.status(404).json({ message: 'Subcategory not found' });
+    }
+    // Also delete associated courses
+    await Course.deleteMany({ subcategoryId: req.params.id });
+    res.json({ message: 'Subcategory deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting subcategory:', error);
+    res.status(500).json({ message: 'Error deleting subcategory' });
   }
 });
 
 // Create Course
-app.post('/api/admin/courses', isAuth, isAdmin, async (req, res) => {
+app.post('/api/courses', isAuth, isAdmin, async (req, res) => {
   try {
-    const {
-      title,
+    const { name, description, categoryId, subcategoryId, thumbnail, chapters = [] } = req.body;
+    
+    console.log('Creating course with data:', {
+      name,
+      description: description?.substring(0, 50) + '...',
+      categoryId,
+      subcategoryId,
+      thumbnail,
+      chaptersCount: chapters?.length || 0
+    });
+    
+    if (chapters && chapters.length > 0) {
+      console.log('Chapters data:', chapters.map(ch => ({
+        title: ch.title,
+        videoUrl: ch.videoUrl,
+        order: ch.order
+      })));
+    }
+    
+    // Validate category and subcategory
+    const category = await Category.findById(categoryId);
+    const subcategory = await Subcategory.findById(subcategoryId);
+    
+    if (!category) {
+      return res.status(400).json({ message: 'Category not found' });
+    }
+    if (!subcategory) {
+      return res.status(400).json({ message: 'Subcategory not found' });
+    }
+    if (subcategory.categoryId.toString() !== categoryId) {
+      return res.status(400).json({ message: 'Subcategory does not belong to the selected category' });
+    }
+
+    const course = new Course({
+      name,
       description,
       categoryId,
       subcategoryId,
-      chapters,
       thumbnail,
-      price,
-    } = req.body;
+      chapters,
+      enrolledStudents: [],
+      analytics: {
+        totalEnrollments: 0,
+        averageProgress: 0,
+        chapterViews: []
+      }
+    });
 
-    const course = new Course({
-      title,
-      description,
-      instructor: req.user._id,
-      category: categoryId,
-      subcategory: subcategoryId,
-      chapters,
-      thumbnail,
-      price,
+    console.log('Course object before save:', {
+      name: course.name,
+      chaptersCount: course.chapters?.length || 0
     });
 
     await course.save();
+    await course.populate('categoryId', 'name');
+    await course.populate('subcategoryId', 'name');
+    
+    console.log('Course saved successfully:', {
+      courseId: course._id,
+      name: course.name,
+      chaptersCount: course.chapters?.length || 0
+    });
+    
     res.status(201).json(course);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating course' });
+  } catch (err) {
+    console.error('Error creating course:', err);
+    if (err.name === 'ValidationError') {
+      console.error('Validation errors:', err.errors);
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: Object.values(err.errors).map(e => e.message)
+      });
+    }
+    res.status(500).json({ message: 'Error creating course', error: err.message });
   }
 });
 
@@ -617,103 +703,7 @@ app.get('/api/subcategories', async (req, res) => {
   }
 });
 
-app.post('/api/subcategories', isAuth, isAdmin, async (req, res) => {
-  try {
-    console.log('Creating subcategory with data:', req.body);
-    const { name, description, categoryId } = req.body;
-    
-    // Validate category exists and log its details
-    const category = await Category.findById(categoryId);
-    console.log('Found category:', category);
-    
-    if (!category) {
-      console.error('Category not found:', categoryId);
-      return res.status(400).json({ message: 'Category not found' });
-    }
-
-    const subcategory = new Subcategory({
-      name,
-      description,
-      categoryId: category._id, // Ensure we're using the ObjectId
-    });
-    
-    console.log('Subcategory before save:', JSON.stringify(subcategory, null, 2));
-    await subcategory.save();
-    
-    const populatedSubcategory = await Subcategory.findById(subcategory._id)
-      .populate('categoryId', 'name');
-    console.log('Created subcategory:', JSON.stringify(populatedSubcategory, null, 2));
-    
-    res.status(201).json(populatedSubcategory);
-  } catch (error) {
-    console.error('Error creating subcategory:', error);
-    res.status(500).json({ 
-      message: 'Error creating subcategory',
-      error: error.message 
-    });
-  }
-});
-
-app.delete('/api/subcategories/:id', isAuth, isAdmin, async (req, res) => {
-  try {
-    const subcategory = await Subcategory.findByIdAndDelete(req.params.id);
-    if (!subcategory) {
-      return res.status(404).json({ message: 'Subcategory not found' });
-    }
-    // Also delete associated courses
-    await Course.deleteMany({ subcategoryId: req.params.id });
-    res.json({ message: 'Subcategory deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting subcategory:', error);
-    res.status(500).json({ message: 'Error deleting subcategory' });
-  }
-});
-
 // Course routes
-app.post('/api/courses', isAuth, isAdmin, async (req, res) => {
-  try {
-    const { name, description, categoryId, subcategoryId, thumbnail } = req.body;
-    
-    // Validate category and subcategory
-    const category = await Category.findById(categoryId);
-    const subcategory = await Subcategory.findById(subcategoryId);
-    
-    if (!category) {
-      return res.status(400).json({ message: 'Category not found' });
-    }
-    if (!subcategory) {
-      return res.status(400).json({ message: 'Subcategory not found' });
-    }
-    if (subcategory.categoryId.toString() !== categoryId) {
-      return res.status(400).json({ message: 'Subcategory does not belong to the selected category' });
-    }
-
-    const course = new Course({
-      name,
-      description,
-      categoryId,
-      subcategoryId,
-      thumbnail,
-      chapters: [],
-      enrolledStudents: [],
-      analytics: {
-        totalEnrollments: 0,
-        averageProgress: 0,
-        chapterViews: []
-      }
-    });
-
-    await course.save();
-    await course.populate('categoryId', 'name');
-    await course.populate('subcategoryId', 'name');
-    
-    res.status(201).json(course);
-  } catch (err) {
-    console.error('Error creating course:', err);
-    res.status(500).json({ message: 'Error creating course', error: err.message });
-  }
-});
-
 app.put('/api/courses/:id', isAuth, isAdmin, async (req, res) => {
   try {
     const { name, description, categoryId, subcategoryId, thumbnail, chapters } = req.body;
@@ -783,7 +773,7 @@ app.delete('/api/courses/:id', isAuth, isAdmin, async (req, res) => {
     if (!course) {
       return res.status(404).json({ message: 'Course not found' });
     }
-    await course.remove();
+    await Course.findByIdAndDelete(req.params.id);
     res.json({ message: 'Course deleted successfully' });
   } catch (err) {
     console.error('Error deleting course:', err);
