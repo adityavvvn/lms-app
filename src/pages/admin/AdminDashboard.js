@@ -300,13 +300,13 @@ function AdminDashboard() {
   };
 
   const calculateStudentProgress = (course, studentId) => {
-    const enrollment = course.enrolledStudents.find(e => e.student._id === studentId);
+    const enrollment = course.enrolledStudents.find(e => e && e.student && e.student._id === studentId);
     if (!enrollment) return 0;
     
     const totalChapters = course.chapters.length;
     if (totalChapters === 0) return 0;
     
-    const completedChapters = enrollment.progress.completedChapters.length;
+    const completedChapters = enrollment.progress?.completedChapters?.length || 0;
     return (completedChapters / totalChapters) * 100;
   };
 
@@ -328,7 +328,9 @@ function AdminDashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {selectedCourse.enrolledStudents.map((enrollment) => (
+              {selectedCourse.enrolledStudents
+                .filter(enrollment => enrollment && enrollment.student)
+                .map((enrollment) => (
                 <TableRow key={enrollment.student._id}>
                   <TableCell>{enrollment.student.name}</TableCell>
                   <TableCell>
@@ -347,7 +349,7 @@ function AdminDashboard() {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    {new Date(enrollment.lastAccessed).toLocaleDateString()}
+                    {enrollment.lastAccessed ? new Date(enrollment.lastAccessed).toLocaleDateString() : 'N/A'}
                   </TableCell>
                 </TableRow>
               ))}
