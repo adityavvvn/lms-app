@@ -16,35 +16,16 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/lms')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// User Schema
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['student', 'admin'], default: 'student' },
-  enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
-  createdAt: { type: Date, default: Date.now },
-});
-
-// Category Schema
-const categorySchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: String,
-  createdAt: { type: Date, default: Date.now },
-});
-
-// Subcategory Schema
-const subcategorySchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: String,
-  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
-  createdAt: { type: Date, default: Date.now },
-});
+// Set JWT secret with fallback
+if (!process.env.JWT_SECRET) {
+  console.warn('JWT_SECRET not set, using default secret (not recommended for production)');
+  process.env.JWT_SECRET = 'your-secret-key-change-this-in-production';
+}
 
 // Model declarations
 const User = require('./models/User');
-const Category = mongoose.model('Category', categorySchema);
-const Subcategory = mongoose.model('Subcategory', subcategorySchema);
+const Category = require('./models/Category');
+const Subcategory = require('./models/Subcategory');
 const Course = require('./models/Course');
 const Progress = require('./models/Progress');
 
@@ -169,16 +150,23 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for:', email);
 
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('User not found:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    console.log('User found:', user.email, 'Role:', user.role);
+
     // Check password
     const isMatch = await user.comparePassword(password);
+    console.log('Password match result:', isMatch);
+    
     if (!isMatch) {
+      console.log('Password mismatch for user:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -189,6 +177,7 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    console.log('Login successful for:', email);
     res.json({
       token,
       user: {
@@ -799,6 +788,41 @@ app.delete('/api/courses/:id', isAuth, isAdmin, async (req, res) => {
   } catch (err) {
     console.error('Error deleting course:', err);
     res.status(500).json({ message: 'Error deleting course', error: err.message });
+  }
+});
+
+// Temporary seed endpoint (remove after use)
+app.post('/api/seed', async (req, res) => {
+  try {
+    // Clear existing users
+    await User.deleteMany({});
+    
+    // Create admin user (don't hash password - let the model do it)
+    const admin = await User.create({
+      name: 'Admin User',
+      email: 'admin@example.com',
+      password: 'admin123',
+      role: 'admin'
+    });
+    
+    // Create student user (don't hash password - let the model do it)
+    const student = await User.create({
+      name: 'Student User',
+      email: 'student@example.com',
+      password: 'student123',
+      role: 'student'
+    });
+    
+    res.json({ 
+      message: 'Database seeded successfully',
+      users: [
+        { email: 'admin@example.com', password: 'admin123', role: 'admin' },
+        { email: 'student@example.com', password: 'student123', role: 'student' }
+      ]
+    });
+  } catch (error) {
+    console.error('Seed error:', error);
+    res.status(500).json({ message: 'Error seeding database' });
   }
 });
 

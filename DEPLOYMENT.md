@@ -50,7 +50,7 @@ The frontend will be deployed automatically with the backend.
 
 ### Environment Variables for Frontend
 Add these environment variables in Render dashboard:
-- `REACT_APP_API_URL`: `https://lms-app-backend-nobf.onrender.com`
+- `REACT_APP_API_URL`: `http://localhost:5000`
 - `REACT_APP_GOOGLE_CLIENT_ID`: Your Google OAuth client ID
 
 ## Step 4: Generate JWT Secret
@@ -66,7 +66,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 4. Add your Render frontend URL + `/callback` to authorized redirect URIs
 
 ## Step 6: Test Your Deployment
-1. Visit your frontend URL: `https://lms-app-cb9n.onrender.com`
+1. Visit your frontend URL: `http://localhost:3000`
 2. Test registration, login, and course functionality
 3. Check that the API calls are working correctly
 
@@ -85,7 +85,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 - [ ] REACT_APP_API_URL (Frontend)
 - [ ] REACT_APP_GOOGLE_CLIENT_ID (Frontend)
 
-## Your Current Setup
-- Frontend: https://lms-app-cb9n.onrender.com ✅
-- Backend: https://lms-app-backend-nobf.onrender.com ✅
-- Both services are deployed and connected! 
+## Local Development Setup
+- Frontend: http://localhost:3000
+- Backend: http://localhost:5000
+- Both services configured for local development 

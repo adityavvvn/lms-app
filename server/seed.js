@@ -20,22 +20,20 @@ const seedDatabase = async () => {
     await Course.deleteMany({});
     console.log('Cleared existing data');
 
-    // Create admin user
-    const adminPassword = await bcrypt.hash('admin123', 10);
+    // Create admin user (don't hash password - let the model do it)
     const admin = await User.create({
       name: 'Admin User',
       email: 'admin@example.com',
-      password: adminPassword,
+      password: 'admin123',
       role: 'admin'
     });
     console.log('Created admin user');
 
-    // Create student user
-    const studentPassword = await bcrypt.hash('student123', 10);
+    // Create student user (don't hash password - let the model do it)
     const student = await User.create({
       name: 'Student User',
       email: 'student@example.com',
-      password: studentPassword,
+      password: 'student123',
       role: 'student'
     });
     console.log('Created student user');
