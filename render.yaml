@@ -25,6 +25,6 @@ services:
     staticPublishPath: ./build
     envVars:
       - key: REACT_APP_API_URL
-        value: https://lms-api.onrender.com
+        value: https://lms-app-backend-nobf.onrender.com
       - key: REACT_APP_GOOGLE_CLIENT_ID
         sync: false 
