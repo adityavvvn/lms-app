@@ -119,6 +119,15 @@ const seedDatabase = async () => {
     for (const courseData of courses) {
       const course = new Course(courseData);
       await course.save();
+      // Enroll the student in each course
+      course.enrolledStudents.push({
+        student: student._id,
+        enrolledAt: new Date(),
+        progress: { completedChapters: [], lastAccessedChapter: null, lastAccessedAt: null }
+      });
+      await course.save();
+      // Populate the student reference so analytics and UI can access name/email
+      await course.populate('enrolledStudents.student', 'name email');
       await course.updateAnalytics();
     }
     console.log('Created courses');
