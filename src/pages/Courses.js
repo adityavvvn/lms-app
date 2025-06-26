@@ -102,7 +102,7 @@ function Courses() {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600, letterSpacing: 1.1 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, letterSpacing: 1.1, mb: 4 }}>
         Available Courses
       </Typography>
       {courses.length === 0 ? (
@@ -112,41 +112,46 @@ function Courses() {
           </Typography>
         </Box>
       ) : (
-        <Grid container spacing={3}>
+        <Grid container spacing={4}>
           {courses.map((course) => (
-            <Grid item xs={12} md={4} key={course._id}>
+            <Grid item xs={12} sm={6} md={4} key={course._id}>
               <Card
                 sx={{
-                  height: '100%',
+                  height: 320,
                   display: 'flex',
                   flexDirection: 'column',
-                  borderRadius: 3,
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  borderRadius: 4,
                   boxShadow: 2,
+                  bgcolor: '#fff',
+                  p: 3,
+                  transition: 'box-shadow 0.2s',
                   '&:hover': {
-                    boxShadow: 4,
+                    boxShadow: 6,
                   },
                 }}
               >
                 <CardMedia
                   component="img"
-                  height="140"
-                  image={course.thumbnail || 'https://via.placeholder.com/300x140'}
+                  image={course.thumbnail || 'https://via.placeholder.com/100x100?text=Course'}
                   alt={course.name}
+                  sx={{ width: 80, height: 80, objectFit: 'contain', mb: 2, borderRadius: 2, bgcolor: '#f5f5f5' }}
                 />
-                <CardContent>
-                  <Typography gutterBottom variant="h6" component="div" sx={{ fontWeight: 600 }}>
+                <CardContent sx={{ p: 0, textAlign: 'center', flex: 1, width: '100%' }}>
+                  <Typography gutterBottom variant="h6" component="div" sx={{ fontWeight: 700 }}>
                     {course.name}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {course.description?.slice(0, 80)}{course.description?.length > 80 ? '...' : ''}
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {course.description?.slice(0, 60)}{course.description?.length > 60 ? '...' : ''}
                   </Typography>
                 </CardContent>
-                <CardActions>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, width: '100%' }}>
                   <Button
                     size="small"
                     color="primary"
                     variant="contained"
-                    sx={{ fontWeight: 500, borderRadius: 2 }}
+                    sx={{ fontWeight: 500, borderRadius: 2, mt: 1 }}
                     onClick={() => navigate(`/courses/${course._id}`)}
                   >
                     View Details
@@ -156,7 +161,7 @@ function Courses() {
                       size="small"
                       color="secondary"
                       variant="outlined"
-                      sx={{ fontWeight: 500, borderRadius: 2 }}
+                      sx={{ fontWeight: 500, borderRadius: 2, mt: 1, ml: 1 }}
                       onClick={() => navigate(`/courses/${course._id}/learn`)}
                     >
                       Continue Learning
@@ -166,14 +171,14 @@ function Courses() {
                       size="small"
                       color="secondary"
                       variant="outlined"
-                      sx={{ fontWeight: 500, borderRadius: 2 }}
+                      sx={{ fontWeight: 500, borderRadius: 2, mt: 1, ml: 1 }}
                       onClick={() => handleEnroll(course._id)}
                       disabled={enrolling}
                     >
                       {enrolling ? 'Enrolling...' : 'Enroll Now'}
                     </Button>
                   )}
-                </CardActions>
+                </Box>
               </Card>
             </Grid>
           ))}

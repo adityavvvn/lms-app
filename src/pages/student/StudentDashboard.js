@@ -95,14 +95,21 @@ function StudentDashboard() {
           </Button>
         </Box>
       ) : (
-        <Grid container spacing={3}>
+        <Grid container spacing={4}>
           {enrolledCourses.map((course) => (
             <Grid item xs={12} sm={6} md={4} key={course._id}>
               <Card
                 sx={{
-                  height: '100%',
+                  height: 320,
                   display: 'flex',
                   flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  borderRadius: 4,
+                  boxShadow: 2,
+                  bgcolor: '#fff',
+                  p: 3,
+                  transition: 'box-shadow 0.2s',
                   '&:hover': {
                     boxShadow: 6,
                     cursor: 'pointer',
@@ -112,24 +119,18 @@ function StudentDashboard() {
               >
                 <CardMedia
                   component="img"
-                  height="140"
-                  image={course.thumbnail || 'https://via.placeholder.com/300x140'}
+                  image={course.thumbnail || 'https://via.placeholder.com/100x100?text=Course'}
                   alt={course.name}
+                  sx={{ width: 80, height: 80, objectFit: 'contain', mb: 2, borderRadius: 2, bgcolor: '#f5f5f5' }}
                 />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h6" component="h2">
+                <CardContent sx={{ flex: 1, p: 0, textAlign: 'center', width: '100%' }}>
+                  <Typography gutterBottom variant="h6" component="h2" sx={{ fontWeight: 700 }}>
                     {course.name}
                   </Typography>
                   <Typography
                     variant="body2"
                     color="text.secondary"
-                    sx={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}
+                    sx={{ mb: 2, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
                   >
                     {course.description}
                   </Typography>
@@ -140,7 +141,7 @@ function StudentDashboard() {
                     <LinearProgress
                       variant="determinate"
                       value={course.progress || 0}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, height: 8, borderRadius: 5 }}
                     />
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                       {Math.round(course.progress || 0)}% Complete

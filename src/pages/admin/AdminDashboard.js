@@ -452,6 +452,18 @@ function AdminDashboard() {
     }
   };
 
+  // Fetch full course details (with populated students) for analytics
+  const handleOpenAnalytics = async (course) => {
+    try {
+      const res = await authAxios.get(`/api/courses/${course._id}`);
+      setSelectedCourse(res.data);
+      setDialogType('analytics');
+      setOpenDialog(true);
+    } catch (err) {
+      console.error('Failed to fetch course analytics:', err);
+    }
+  };
+
   const renderDialogContent = () => {
     if (dialogType === 'analytics' && selectedCourse) {
       return (
@@ -473,7 +485,7 @@ function AdminDashboard() {
                   .filter(enrollment => enrollment && enrollment.student)
                   .map((enrollment) => (
                   <TableRow key={enrollment.student._id}>
-                    <TableCell>{enrollment.student.name}</TableCell>
+                    <TableCell>{enrollment.student?.name || enrollment.student?.email || 'Unknown'}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Box sx={{ width: '100%', mr: 1 }}>
@@ -894,49 +906,51 @@ function AdminDashboard() {
       );
     }
 
+    // Modern card/grid layout
     return (
-      <List>
+      <Grid container spacing={4}>
         {items.map((item) => (
-          <ListItem
-            key={item._id}
-            sx={{
-              mb: 1,
-              bgcolor: 'background.paper',
-              borderRadius: 1,
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
-            }}
-          >
-            <ListItemText
-              primary={item.name}
-              secondary={
-                type === 'course' ? (
-                  <>
-                    <Typography component="span" variant="body2" color="textPrimary">
-                      {item.categoryId?.name} &gt; {item.subcategoryId?.name}
-                    </Typography>
-                    <br />
-                    <Typography component="span" variant="body2" color="textSecondary">
-                      {item.chapters?.length || 0} chapters • {item.analytics?.totalEnrollments || 0} students enrolled
-                    </Typography>
-                  </>
-                ) : (
-                  item.description
-                )
-              }
-            />
-            <ListItemSecondaryAction>
+          <Grid item xs={12} sm={6} md={4} key={item._id}>
+            <Card
+              sx={{
+                height: 220,
+                minHeight: 220,
+                maxHeight: 220,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                borderRadius: 4,
+                boxShadow: 2,
+                bgcolor: '#fff',
+                p: 3,
+                transition: 'box-shadow 0.2s',
+                '&:hover': {
+                  boxShadow: 6,
+                },
+              }}
+            >
+              {/* Placeholder icon/image */}
+              <Box sx={{ width: 64, height: 64, mb: 2, bgcolor: '#f5f5f5', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="h3" color="text.secondary">
+                  {item.name?.charAt(0) || '?'}
+                </Typography>
+              </Box>
+              <CardContent sx={{ p: 0, textAlign: 'center', flex: 1, width: '100%' }}>
+                <Typography gutterBottom variant="h6" component="div" sx={{ fontWeight: 700 }}>
+                  {item.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  {item.description?.slice(0, 60)}{item.description?.length > 60 ? '...' : ''}
+                </Typography>
+              </CardContent>
+              {/* Existing actions (edit, delete, analytics, etc.) */}
               {type === 'course' && (
-                <>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, width: '100%' }}>
                   <IconButton
                     edge="end"
                     aria-label="analytics"
-                    onClick={() => {
-                      setSelectedCourse(item);
-                      setDialogType('analytics');
-                      setOpenDialog(true);
-                    }}
+                    onClick={() => handleOpenAnalytics(item)}
                     sx={{ mr: 1 }}
                   >
                     <AnalyticsIcon />
@@ -949,19 +963,38 @@ function AdminDashboard() {
                   >
                     <EditIcon />
                   </IconButton>
-                </>
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => handleDelete(item._id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
               )}
-              <IconButton
-                edge="end"
-                aria-label="delete"
-                onClick={() => handleDelete(item._id)}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </ListItemSecondaryAction>
-          </ListItem>
+              {type !== 'course' && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, width: '100%' }}>
+                  <IconButton
+                    edge="end"
+                    aria-label="edit"
+                    onClick={() => handleEditCourse(item)}
+                    sx={{ mr: 1 }}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => handleDelete(item._id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              )}
+            </Card>
+          </Grid>
         ))}
-      </List>
+      </Grid>
     );
   };
 
