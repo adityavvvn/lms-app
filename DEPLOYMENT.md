@@ -1,5 +1,10 @@
 # LMS App Deployment Guide for Render
 
+## Deployed URLs
+
+- **Frontend:** https://lms-app-cb9n.onrender.com
+- **Backend:** https://lms-app-backend-nobf.onrender.com
+
 ## Prerequisites
 1. MongoDB Atlas account (for database)
 2. Render account
@@ -50,7 +55,7 @@ The frontend will be deployed automatically with the backend.
 
 ### Environment Variables for Frontend
 Add these environment variables in Render dashboard:
-- `REACT_APP_API_URL`: `http://localhost:5000`
+- `REACT_APP_API_URL`: `https://lms-app-backend-nobf.onrender.com`
 - `REACT_APP_GOOGLE_CLIENT_ID`: Your Google OAuth client ID
 
 ## Step 4: Generate JWT Secret

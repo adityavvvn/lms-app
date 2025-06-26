@@ -2,6 +2,11 @@
 
 A full-stack Learning Management System built with React, Node.js, Express, and MongoDB. This application allows students to enroll in courses, track their progress, and learn through video content, while administrators can manage courses, categories, and monitor student progress.
 
+## Live Demo
+
+- **Frontend:** https://lms-app-cb9n.onrender.com
+- **Backend API:** https://lms-app-backend-nobf.onrender.com
+
 ## Features
 
 - User authentication (Student and Admin roles)
@@ -36,7 +41,7 @@ PORT=5000
 
 3. Create a `.env` file in the root directory for the frontend:
 ```env
-REACT_APP_API_URL=http://localhost:5000
+REACT_APP_API_URL=https://lms-app-backend-nobf.onrender.com
 REACT_APP_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 

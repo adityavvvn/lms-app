@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const chapterSchema = new mongoose.Schema({
+  _id: {
+    type: String,
+    default: () => Date.now().toString()
+  },
   title: {
     type: String,
     required: true,
@@ -34,6 +38,12 @@ const chapterSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   }
+}, { _id: true });
+
+const reviewSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  rating: { type: Number, min: 1, max: 5, required: true },
+  text: { type: String, trim: true },
 });
 
 const courseSchema = new mongoose.Schema({
@@ -73,12 +83,10 @@ const courseSchema = new mongoose.Schema({
     },
     progress: {
       completedChapters: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Chapter'
+        type: String
       }],
       lastAccessedChapter: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Chapter'
+        type: String
       },
       lastAccessedAt: {
         type: Date
@@ -114,8 +122,7 @@ const courseSchema = new mongoose.Schema({
     }],
     chapterViews: [{
       chapter: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Chapter'
+        type: String
       },
       views: {
         type: Number,
@@ -126,6 +133,11 @@ const courseSchema = new mongoose.Schema({
       }
     }]
   },
+  admin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -133,7 +145,8 @@ const courseSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now,
-  }
+  },
+  reviews: [reviewSchema],
 });
 
 // Update the updatedAt timestamp before saving

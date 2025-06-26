@@ -35,6 +35,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  Alert,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -46,6 +47,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import authAxios from '../../utils/authAxios';
+import publicAxios from '../../utils/publicAxios';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -74,6 +76,11 @@ function AdminDashboard() {
     order: 0,
     duration: '',
   });
+  const [admins, setAdmins] = useState([]);
+  const [userForm, setUserForm] = useState({ name: '', email: '', password: '' });
+  const [userFormLoading, setUserFormLoading] = useState(false);
+  const [userFormError, setUserFormError] = useState('');
+  const [userFormSuccess, setUserFormSuccess] = useState('');
 
   // Fetch all data
   const fetchData = async () => {
@@ -83,7 +90,7 @@ function AdminDashboard() {
 
       // Fetch categories
       console.log('Fetching categories...');
-      const categoriesResponse = await authAxios.get('/api/categories');
+      const categoriesResponse = await publicAxios.get('/api/categories');
       console.log('Categories response:', categoriesResponse.data);
       setCategories(categoriesResponse.data);
 
@@ -98,6 +105,10 @@ function AdminDashboard() {
       const coursesResponse = await authAxios.get('/api/courses');
       console.log('Courses response:', coursesResponse.data);
       setCourses(coursesResponse.data);
+
+      // Fetch admins
+      const adminsResponse = await authAxios.get('/api/users?role=admin');
+      setAdmins(adminsResponse.data);
     } catch (err) {
       console.error('Error fetching categories:', err);
       setError('Failed to fetch data. Please try again later.');
@@ -417,6 +428,30 @@ function AdminDashboard() {
     return (completedChapters / totalChapters) * 100;
   };
 
+  const handleUserFormChange = (e) => {
+    const { name, value } = e.target;
+    setUserForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleUserFormSubmit = async (e) => {
+    e.preventDefault();
+    setUserFormError('');
+    setUserFormSuccess('');
+    setUserFormLoading(true);
+    try {
+      const res = await authAxios.post('/api/admin/users', userForm);
+      setUserFormSuccess('Admin user created successfully!');
+      setUserForm({ name: '', email: '', password: '' });
+      // Refresh admin list
+      const adminsResponse = await authAxios.get('/api/users?role=admin');
+      setAdmins(adminsResponse.data);
+    } catch (err) {
+      setUserFormError(err.response?.data?.message || 'Failed to create admin user');
+    } finally {
+      setUserFormLoading(false);
+    }
+  };
+
   const renderDialogContent = () => {
     if (dialogType === 'analytics' && selectedCourse) {
       return (
@@ -685,7 +720,151 @@ function AdminDashboard() {
     );
   };
 
+  const renderChapterList = () => {
+    // Flatten all chapters from courses, include course info
+    const chapterRows = courses
+      .filter(course => course.admin?._id === user?._id) // Only admin's courses
+      .flatMap(course =>
+        (course.chapters || []).map((chapter, idx) => ({
+          ...chapter,
+          courseName: course.name,
+          courseId: course._id,
+          course,
+        }))
+      );
+    if (loading) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <LinearProgress sx={{ width: '100%' }} />
+        </Box>
+      );
+    }
+    if (chapterRows.length === 0) {
+      return (
+        <Box sx={{ textAlign: 'center', mt: 4 }}>
+          <Typography color="textSecondary">
+            No chapters found for your courses.
+          </Typography>
+        </Box>
+      );
+    }
+    return (
+      <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Course</TableCell>
+              <TableCell>Title</TableCell>
+              <TableCell>Order</TableCell>
+              <TableCell>Duration</TableCell>
+              <TableCell>Video URL</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {chapterRows.map((chapter, idx) => (
+              <TableRow key={chapter._id || `${chapter.courseId}-${idx}`}> 
+                <TableCell>{chapter.courseName}</TableCell>
+                <TableCell>{chapter.title}</TableCell>
+                <TableCell>{chapter.order}</TableCell>
+                <TableCell>{chapter.duration || '-'}</TableCell>
+                <TableCell>
+                  <a href={chapter.videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>
+                    Video Link
+                  </a>
+                </TableCell>
+                <TableCell align="right">
+                  <IconButton size="small" onClick={() => handleEditChapter(chapter.course, chapter, chapter.order - 1)} sx={{ mr: 1 }}>
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton size="small" color="error" onClick={() => handleRemoveChapter(chapter.course, chapter._id)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    );
+  };
+
+  const renderUserManagement = () => (
+    <Box>
+      <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>Admin Users</Typography>
+      <TableContainer component={Paper} sx={{ mb: 4, borderRadius: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Created At</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {admins.map((admin) => (
+              <TableRow key={admin._id || admin.id}>
+                <TableCell>{admin.name}</TableCell>
+                <TableCell>{admin.email}</TableCell>
+                <TableCell>{admin.createdAt ? new Date(admin.createdAt).toLocaleString() : ''}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <Typography variant="h6" sx={{ mb: 2 }}>Create New Admin</Typography>
+      <Box component="form" onSubmit={handleUserFormSubmit} sx={{ maxWidth: 400 }}>
+        <TextField
+          label="Full Name"
+          name="name"
+          value={userForm.name}
+          onChange={handleUserFormChange}
+          fullWidth
+          required
+          margin="normal"
+        />
+        <TextField
+          label="Email"
+          name="email"
+          value={userForm.email}
+          onChange={handleUserFormChange}
+          fullWidth
+          required
+          margin="normal"
+          type="email"
+        />
+        <TextField
+          label="Password"
+          name="password"
+          value={userForm.password}
+          onChange={handleUserFormChange}
+          fullWidth
+          required
+          margin="normal"
+          type="password"
+        />
+        {userFormError && <Alert severity="error" sx={{ mt: 2 }}>{userFormError}</Alert>}
+        {userFormSuccess && <Alert severity="success" sx={{ mt: 2 }}>{userFormSuccess}</Alert>}
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          sx={{ mt: 2, fontWeight: 500, borderRadius: 2 }}
+          disabled={userFormLoading}
+        >
+          {userFormLoading ? 'Creating...' : 'Create Admin'}
+        </Button>
+      </Box>
+    </Box>
+  );
+
   const renderList = () => {
+    if (tabValue === 3) {
+      return renderChapterList();
+    }
+    if (tabValue === 4) {
+      return renderUserManagement();
+    }
     const items = tabValue === 0 ? categories : tabValue === 1 ? subcategories : courses;
     const type = tabValue === 0 ? 'category' : tabValue === 1 ? 'subcategory' : 'course';
 
@@ -792,24 +971,26 @@ function AdminDashboard() {
         <Typography variant="h4" component="h1">
           Admin Dashboard
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setFormData({
-              name: '',
-              description: '',
-              categoryId: '',
-              subcategoryId: '',
-              thumbnail: '',
-              chapters: [],
-            });
-            setDialogType(tabValue === 0 ? 'category' : tabValue === 1 ? 'subcategory' : 'course');
-            setOpenDialog(true);
-          }}
-        >
-          Add {tabValue === 0 ? 'Category' : tabValue === 1 ? 'Subcategory' : 'Course'}
-        </Button>
+        {tabValue !== 3 && tabValue !== 4 && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setFormData({
+                name: '',
+                description: '',
+                categoryId: '',
+                subcategoryId: '',
+                thumbnail: '',
+                chapters: [],
+              });
+              setDialogType(tabValue === 0 ? 'category' : tabValue === 1 ? 'subcategory' : 'course');
+              setOpenDialog(true);
+            }}
+          >
+            Add {tabValue === 0 ? 'Category' : tabValue === 1 ? 'Subcategory' : 'Course'}
+          </Button>
+        )}
       </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -817,6 +998,8 @@ function AdminDashboard() {
           <Tab label={`Categories (${categories.length})`} />
           <Tab label={`Subcategories (${subcategories.length})`} />
           <Tab label={`Courses (${courses.length})`} />
+          <Tab label="Chapters" />
+          <Tab label="User Management" />
         </Tabs>
       </Box>
 

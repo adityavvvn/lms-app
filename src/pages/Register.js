@@ -91,9 +91,10 @@ function Register() {
             flexDirection: 'column',
             alignItems: 'center',
             width: '100%',
+            borderRadius: 3,
           }}
         >
-          <Typography component="h1" variant="h5">
+          <Typography component="h1" variant="h5" sx={{ fontWeight: 600, letterSpacing: 1.1 }}>
             Register
           </Typography>
           {error && (
@@ -157,16 +158,17 @@ function Register() {
                 value={formData.role}
                 label="Role"
                 onChange={handleChange}
+                disabled
               >
                 <MenuItem value="student">Student</MenuItem>
-                <MenuItem value="admin">Admin</MenuItem>
               </Select>
             </FormControl>
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              color="primary"
+              sx={{ mt: 3, mb: 2, fontWeight: 500, borderRadius: 2 }}
               disabled={loading}
             >
               {loading ? 'Registering...' : 'Register'}

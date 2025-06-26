@@ -14,6 +14,8 @@ import {
   Box,
   LinearProgress,
   Alert,
+  Rating,
+  TextField,
 } from '@mui/material';
 import {
   PlayCircleOutline,
@@ -34,9 +36,16 @@ function CourseDetail() {
   const [enrolling, setEnrolling] = useState(false);
   const [enrollError, setEnrollError] = useState(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSuccess, setReviewSuccess] = useState('');
 
   useEffect(() => {
     fetchCourse();
+    fetchReviews();
   }, [courseId]);
 
   const fetchCourse = async () => {
@@ -55,6 +64,15 @@ function CourseDetail() {
       setError(err.response?.data?.message || 'Error fetching course');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const res = await authAxios.get(`/api/courses/${courseId}/reviews`);
+      setReviews(res.data);
+    } catch (err) {
+      setReviews([]);
     }
   };
 
@@ -79,6 +97,27 @@ function CourseDetail() {
       });
     } finally {
       setEnrolling(false);
+    }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setReviewError('');
+    setReviewSuccess('');
+    setReviewLoading(true);
+    try {
+      await authAxios.post(`/api/courses/${courseId}/reviews`, {
+        rating: reviewRating,
+        text: reviewText,
+      });
+      setReviewSuccess('Review submitted!');
+      setReviewText('');
+      setReviewRating(0);
+      fetchReviews();
+    } catch (err) {
+      setReviewError(err.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -171,7 +210,7 @@ function CourseDetail() {
                     </ListItemIcon>
                     <ListItemText
                       primary={`${index + 1}. ${chapter.title}`}
-                      secondary={`${chapter.type.charAt(0).toUpperCase() + chapter.type.slice(1)} • ${chapter.duration || 'N/A'}`}
+                      secondary={`${(chapter.type ? chapter.type.charAt(0).toUpperCase() + chapter.type.slice(1) : 'Unknown')} • ${chapter.duration || 'N/A'}`}
                     />
                     {isEnrolled ? (
                       <Button
@@ -233,6 +272,88 @@ function CourseDetail() {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Review and Rating Section */}
+      <Box sx={{ mt: 6 }}>
+        <Typography variant="h5" gutterBottom>
+          Reviews & Ratings
+        </Typography>
+        {/* Average Rating */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Rating
+            value={
+              reviews.length > 0
+                ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+                : 0
+            }
+            precision={0.5}
+            readOnly
+          />
+          <Typography sx={{ ml: 1 }}>
+            {reviews.length > 0
+              ? `${(
+                  reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+                ).toFixed(1)} / 5 (${reviews.length} review${reviews.length > 1 ? 's' : ''})`
+              : 'No reviews yet'}
+          </Typography>
+        </Box>
+        {/* Review Form (enrolled users only) */}
+        {isEnrolled && (
+          <Box component="form" onSubmit={handleReviewSubmit} sx={{ mb: 4, maxWidth: 500 }}>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              Leave a Review
+            </Typography>
+            <Rating
+              name="rating"
+              value={reviewRating}
+              onChange={(_, newValue) => setReviewRating(newValue)}
+              precision={1}
+              sx={{ mb: 1 }}
+              required
+            />
+            <TextField
+              label="Your feedback"
+              value={reviewText}
+              onChange={e => setReviewText(e.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+              maxRows={4}
+              required
+              sx={{ mb: 2 }}
+            />
+            {reviewError && <Alert severity="error" sx={{ mb: 2 }}>{reviewError}</Alert>}
+            {reviewSuccess && <Alert severity="success" sx={{ mb: 2 }}>{reviewSuccess}</Alert>}
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={reviewLoading || !reviewRating || !reviewText}
+            >
+              {reviewLoading ? 'Submitting...' : 'Submit Review'}
+            </Button>
+          </Box>
+        )}
+        {/* List of Reviews */}
+        <Box>
+          {reviews.length === 0 ? (
+            <Typography color="textSecondary">No reviews yet.</Typography>
+          ) : (
+            reviews.map((r, idx) => (
+              <Paper key={idx} sx={{ p: 2, mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Rating value={r.rating} readOnly size="small" />
+                  <Typography sx={{ ml: 1, fontWeight: 500 }}>{r.user?.name || 'User'}</Typography>
+                  <Typography sx={{ ml: 2, color: 'text.secondary', fontSize: 13 }}>
+                    {r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}
+                  </Typography>
+                </Box>
+                <Typography>{r.text}</Typography>
+              </Paper>
+            ))
+          )}
+        </Box>
+      </Box>
 
       {enrollError && (
         <Alert

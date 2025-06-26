@@ -32,14 +32,14 @@ function Dashboard() {
 
   return (
     <Container maxWidth="lg">
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600, letterSpacing: 1.1 }}>
         Welcome to Your Learning Dashboard
       </Typography>
       
       <Grid container spacing={3}>
         <Grid item xs={12}>
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>
+          <Paper sx={{ p: 2, mb: 2, borderRadius: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 500 }}>
               Your Progress Overview
             </Typography>
             <Typography variant="body1">
@@ -49,16 +49,16 @@ function Dashboard() {
         </Grid>
 
         <Grid item xs={12}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 500 }}>
             Enrolled Courses
           </Typography>
         </Grid>
 
         {enrolledCourses.map((course) => (
           <Grid item xs={12} md={6} key={course.id}>
-            <Card>
+            <Card sx={{ borderRadius: 3, boxShadow: 2 }}>
               <CardContent>
-                <Typography variant="h6" component="div">
+                <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
                   {course.title}
                 </Typography>
                 <Typography color="text.secondary" gutterBottom>
@@ -72,6 +72,8 @@ function Dashboard() {
                 <Button
                   size="small"
                   color="primary"
+                  variant="contained"
+                  sx={{ fontWeight: 500, borderRadius: 2 }}
                   onClick={() => navigate(`/courses/${course.id}`)}
                 >
                   Continue Learning

@@ -8,7 +8,13 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://lms-app-cb9n.onrender.com',
+    'http://localhost:3000'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Connect to MongoDB
@@ -74,7 +80,7 @@ const isAdmin = async (req, res, next) => {
 app.post('/api/auth/register', async (req, res) => {
   try {
     console.log('Registration request received:', req.body); // Debug log
-    const { name, email, password, role = 'student' } = req.body;
+    let { name, email, password, role = 'student' } = req.body;
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -105,6 +111,15 @@ app.post('/api/auth/register', async (req, res) => {
     if (existingUser) {
       console.log('User already exists:', email);
       return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Only allow 'admin' role if there are no admins in the database
+    if (role === 'admin') {
+      const existingAdmin = await User.findOne({ role: 'admin' });
+      if (existingAdmin) {
+        // If an admin already exists, force role to 'student'
+        role = 'student';
+      }
     }
 
     // Create new user
@@ -206,6 +221,27 @@ app.get('/api/auth/me', isAuth, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching user data' });
+  }
+});
+
+// Update current user's profile
+app.put('/api/auth/me', isAuth, async (req, res) => {
+  try {
+    const { name, password } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (name) user.name = name;
+    if (password) user.password = password; // Will be hashed by pre-save hook
+    await user.save();
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      updatedAt: user.updatedAt,
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating profile' });
   }
 });
 
@@ -339,19 +375,29 @@ app.post('/api/courses', isAuth, isAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Subcategory does not belong to the selected category' });
     }
 
+    // Process chapters to ensure proper _id fields
+    const processedChapters = chapters.map((chapter, index) => {
+      // Ensure each chapter has a proper _id (use timestamp if not present or invalid)
+      if (!chapter._id || typeof chapter._id !== 'string') {
+        chapter._id = (Date.now() + index).toString();
+      }
+      return chapter;
+    });
+
     const course = new Course({
       name,
       description,
       categoryId,
       subcategoryId,
       thumbnail,
-      chapters,
+      chapters: processedChapters,
       enrolledStudents: [],
       analytics: {
         totalEnrollments: 0,
         averageProgress: 0,
         chapterViews: []
-      }
+      },
+      admin: req.user._id,
     });
 
     console.log('Course object before save:', {
@@ -383,22 +429,15 @@ app.post('/api/courses', isAuth, isAdmin, async (req, res) => {
   }
 });
 
-// Student Routes
-
-// Get all courses
-app.get('/api/courses', async (req, res) => {
+// Get all courses (admin only sees their own)
+app.get('/api/courses', isAuth, isAdmin, async (req, res) => {
   try {
-    console.log('Fetching courses...');
-    const courses = await Course.find()
+    const courses = await Course.find({ admin: req.user._id })
       .populate('categoryId', 'name')
-      .populate('subcategoryId', 'name')
-      .populate('enrolledStudents.student', 'name email')
-      .sort({ createdAt: -1 });
-    console.log(`Found ${courses.length} courses`);
+      .populate('subcategoryId', 'name');
     res.json(courses);
   } catch (err) {
-    console.error('Error fetching courses:', err);
-    res.status(500).json({ message: 'Error fetching courses', error: err.message });
+    res.status(500).json({ message: 'Error fetching courses' });
   }
 });
 
@@ -703,16 +742,16 @@ app.get('/api/subcategories', async (req, res) => {
   }
 });
 
-// Course routes
+// Update course (admin can only update their own)
 app.put('/api/courses/:id', isAuth, isAdmin, async (req, res) => {
   try {
-    const { name, description, categoryId, subcategoryId, thumbnail, chapters } = req.body;
     const course = await Course.findById(req.params.id);
-    
-    if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    if (course.admin.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this course' });
     }
-
+    const { name, description, categoryId, subcategoryId, thumbnail, chapters } = req.body;
+    
     // Validate category and subcategory if they're being updated
     if (categoryId && categoryId !== course.categoryId.toString()) {
       const category = await Category.findById(categoryId);
@@ -740,13 +779,18 @@ app.put('/api/courses/:id', isAuth, isAdmin, async (req, res) => {
     
     // Update chapters if provided
     if (chapters) {
-      // Validate chapter data
+      // Validate chapter data and ensure proper _id fields
       for (const chapter of chapters) {
         if (!chapter.title || !chapter.videoUrl) {
           return res.status(400).json({ message: 'Each chapter must have a title and video URL' });
         }
         if (!/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/.test(chapter.videoUrl)) {
           return res.status(400).json({ message: 'Invalid YouTube URL in chapter' });
+        }
+        
+        // Ensure each chapter has a proper _id (use timestamp if not present or invalid)
+        if (!chapter._id || typeof chapter._id !== 'string') {
+          chapter._id = Date.now().toString();
         }
       }
       course.chapters = chapters;
@@ -767,17 +811,18 @@ app.put('/api/courses/:id', isAuth, isAdmin, async (req, res) => {
   }
 });
 
+// Delete course (admin can only delete their own)
 app.delete('/api/courses/:id', isAuth, isAdmin, async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
-    if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    if (course.admin.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to delete this course' });
     }
     await Course.findByIdAndDelete(req.params.id);
     res.json({ message: 'Course deleted successfully' });
   } catch (err) {
-    console.error('Error deleting course:', err);
-    res.status(500).json({ message: 'Error deleting course', error: err.message });
+    res.status(500).json({ message: 'Error deleting course' });
   }
 });
 
@@ -813,6 +858,105 @@ app.post('/api/seed', async (req, res) => {
   } catch (error) {
     console.error('Seed error:', error);
     res.status(500).json({ message: 'Error seeding database' });
+  }
+});
+
+// Admin creates a new admin user
+app.post('/api/admin/users', isAuth, isAdmin, async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required.' });
+    }
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists.' });
+    }
+    // Create new admin user
+    const user = new User({
+      name,
+      email,
+      password,
+      role: 'admin',
+    });
+    await user.save();
+    res.status(201).json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+    });
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    res.status(500).json({ message: 'Error creating admin user' });
+  }
+});
+
+// Get all reviews for a course
+app.get('/api/courses/:id/reviews', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).populate('reviews.user', 'name');
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    res.json(course.reviews || []);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching reviews' });
+  }
+});
+
+// Submit a review for a course (enrolled users only, one per user)
+app.post('/api/courses/:id/reviews', isAuth, async (req, res) => {
+  try {
+    const { rating, text } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    // Check if user is enrolled
+    const isEnrolled = course.enrolledStudents.some(e => e.student.toString() === req.user._id.toString());
+    if (!isEnrolled) {
+      return res.status(403).json({ message: 'Only enrolled users can submit reviews' });
+    }
+    // Check if user already reviewed
+    const alreadyReviewed = course.reviews.some(r => r.user.toString() === req.user._id.toString());
+    if (alreadyReviewed) {
+      return res.status(400).json({ message: 'You have already reviewed this course' });
+    }
+    // Add review
+    course.reviews.push({ user: req.user._id, rating, text });
+    await course.save();
+    await course.populate('reviews.user', 'name');
+    res.status(201).json(course.reviews);
+  } catch (err) {
+    res.status(500).json({ message: 'Error submitting review' });
+  }
+});
+
+// Get all users (optionally filter by role)
+app.get('/api/users', async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.role) {
+      filter.role = req.query.role;
+    }
+    const users = await User.find(filter).select('-password');
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching users' });
+  }
+});
+
+// Public: Get all courses (for students and guests)
+app.get('/api/public-courses', async (req, res) => {
+  try {
+    const courses = await Course.find()
+      .populate('categoryId', 'name')
+      .populate('subcategoryId', 'name');
+    res.json(courses);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching courses' });
   }
 });
 

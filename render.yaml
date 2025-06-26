@@ -1,30 +1,29 @@
 services:
-  # Backend API Service
+  # Frontend React App
   - type: web
-    name: lms-api
-    env: node
-    plan: free
-    buildCommand: cd server && npm install
-    startCommand: cd server && node server.js
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: MONGODB_URI
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: PORT
-        value: 10000
-
-  # Frontend Web Service
-  - type: web
-    name: lms-frontend
+    name: lms-app-frontend
     env: static
-    plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./build
     envVars:
       - key: REACT_APP_API_URL
-        value: http://localhost:5000
-      - key: REACT_APP_GOOGLE_CLIENT_ID
-        sync: false 
+        value: https://lms-app-backend-nobf.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Backend Node.js API
+  - type: web
+    name: lms-app-backend
+    env: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: MONGODB_URI
+        value: mongodb+srv://your-mongodb-uri
+      - key: JWT_SECRET
+        value: your-super-secret-jwt-key-change-this-in-production
+      - key: NODE_ENV
+        value: production 

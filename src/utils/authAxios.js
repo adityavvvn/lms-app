@@ -1,6 +1,13 @@
 import axios from 'axios';
 
-const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+let baseURL = process.env.REACT_APP_API_URL;
+if (!baseURL) {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    baseURL = 'http://localhost:5000';
+  } else {
+    baseURL = 'https://lms-app-backend-nobf.onrender.com';
+  }
+}
 
 const authAxios = axios.create({
   baseURL,

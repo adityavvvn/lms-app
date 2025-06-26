@@ -16,6 +16,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import authAxios from '../utils/authAxios';
+import publicAxios from '../utils/publicAxios';
 
 function Courses() {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ function Courses() {
 
   const fetchCourses = async () => {
     try {
-      const response = await authAxios.get('/api/courses');
+      const response = await publicAxios.get('/api/public-courses');
       setCourses(response.data);
     } catch (err) {
       console.error('Error fetching courses:', err);
@@ -101,10 +102,9 @@ function Courses() {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600, letterSpacing: 1.1 }}>
         Available Courses
       </Typography>
-
       {courses.length === 0 ? (
         <Box sx={{ textAlign: 'center', mt: 4 }}>
           <Typography color="textSecondary">
@@ -120,8 +120,10 @@ function Courses() {
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
+                  borderRadius: 3,
+                  boxShadow: 2,
                   '&:hover': {
-                    boxShadow: 3,
+                    boxShadow: 4,
                   },
                 }}
               >
@@ -131,38 +133,20 @@ function Courses() {
                   image={course.thumbnail || 'https://via.placeholder.com/300x140'}
                   alt={course.name}
                 />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h5" component="h2">
+                <CardContent>
+                  <Typography gutterBottom variant="h6" component="div" sx={{ fontWeight: 600 }}>
                     {course.name}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      mb: 2,
-                    }}
-                  >
-                    {course.description}
-                  </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Category: {course.categoryId?.name || 'Uncategorized'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Subcategory: {course.subcategoryId?.name || 'None'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Chapters: {course.chapters?.length || 0}
+                    {course.description?.slice(0, 80)}{course.description?.length > 80 ? '...' : ''}
                   </Typography>
                 </CardContent>
                 <CardActions>
                   <Button
                     size="small"
                     color="primary"
+                    variant="contained"
+                    sx={{ fontWeight: 500, borderRadius: 2 }}
                     onClick={() => navigate(`/courses/${course._id}`)}
                   >
                     View Details
@@ -170,7 +154,9 @@ function Courses() {
                   {isEnrolled(course._id) ? (
                     <Button
                       size="small"
-                      color="primary"
+                      color="secondary"
+                      variant="outlined"
+                      sx={{ fontWeight: 500, borderRadius: 2 }}
                       onClick={() => navigate(`/courses/${course._id}/learn`)}
                     >
                       Continue Learning
@@ -178,7 +164,9 @@ function Courses() {
                   ) : (
                     <Button
                       size="small"
-                      color="primary"
+                      color="secondary"
+                      variant="outlined"
+                      sx={{ fontWeight: 500, borderRadius: 2 }}
                       onClick={() => handleEnroll(course._id)}
                       disabled={enrolling}
                     >
@@ -191,7 +179,6 @@ function Courses() {
           ))}
         </Grid>
       )}
-
       <Snackbar
         open={!!enrollError}
         autoHideDuration={6000}

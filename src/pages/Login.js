@@ -53,7 +53,7 @@ function Login() {
           alignItems: 'center',
         }}
       >
-        <Typography component="h1" variant="h4" gutterBottom>
+        <Typography component="h1" variant="h4" gutterBottom sx={{ fontWeight: 600, letterSpacing: 1.1 }}>
           Login
         </Typography>
 
@@ -90,7 +90,8 @@ function Login() {
             type="submit"
             fullWidth
             variant="contained"
-            sx={{ mt: 3, mb: 2 }}
+            color="primary"
+            sx={{ mt: 3, mb: 2, fontWeight: 500, borderRadius: 2 }}
             disabled={loading}
           >
             {loading ? 'Logging in...' : 'Login'}

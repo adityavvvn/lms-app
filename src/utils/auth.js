@@ -38,7 +38,7 @@ export const removeUser = () => {
 import axios from 'axios';
 
 export const authAxios = axios.create({
-    baseURL: 'http://localhost:5000/api',
+    baseURL: 'https://lms-app-backend-nobf.onrender.com/api',
     headers: {
         'Content-Type': 'application/json',
     },

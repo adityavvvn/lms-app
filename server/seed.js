@@ -87,7 +87,8 @@ const seedDatabase = async () => {
             order: 2,
             duration: '20:00'
           }
-        ]
+        ],
+        admin: admin._id
       },
       {
         name: 'React for Beginners',
@@ -110,7 +111,8 @@ const seedDatabase = async () => {
             order: 2,
             duration: '20:00'
           }
-        ]
+        ],
+        admin: admin._id
       }
     ];
 

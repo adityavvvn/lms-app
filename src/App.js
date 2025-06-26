@@ -14,6 +14,7 @@ import StudentDashboard from './pages/student/StudentDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import PrivateRoute from './components/PrivateRoute';
 import CourseDetail from './pages/CourseDetail';
+import AdminProfile from './pages/admin/AdminProfile';
 
 function App() {
   return (
@@ -56,6 +57,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <CourseView />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <PrivateRoute role="admin">
+                    <AdminProfile />
                   </PrivateRoute>
                 }
               />
