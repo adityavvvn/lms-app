@@ -434,7 +434,8 @@ app.get('/api/courses', isAuth, isAdmin, async (req, res) => {
   try {
     const courses = await Course.find({ admin: req.user._id })
       .populate('categoryId', 'name')
-      .populate('subcategoryId', 'name');
+      .populate('subcategoryId', 'name')
+      .populate('reviews.user', 'name email');
     res.json(courses);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching courses' });

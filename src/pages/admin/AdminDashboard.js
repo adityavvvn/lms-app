@@ -44,6 +44,7 @@ import {
   People as PeopleIcon,
   Analytics as AnalyticsIcon,
   PlaylistAdd as PlaylistAddIcon,
+  Star as StarIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import authAxios from '../../utils/authAxios';
@@ -81,6 +82,9 @@ function AdminDashboard() {
   const [userFormLoading, setUserFormLoading] = useState(false);
   const [userFormError, setUserFormError] = useState('');
   const [userFormSuccess, setUserFormSuccess] = useState('');
+  const [reviewsTabCourses, setReviewsTabCourses] = useState([]);
+  const [reviewsTabLoading, setReviewsTabLoading] = useState(false);
+  const [reviewsTabError, setReviewsTabError] = useState('');
 
   // Fetch all data
   const fetchData = async () => {
@@ -870,12 +874,59 @@ function AdminDashboard() {
     </Box>
   );
 
+  const renderReviewsTab = () => {
+    if (reviewsTabLoading) {
+      return <LinearProgress sx={{ width: '100%' }} />;
+    }
+    if (reviewsTabError) {
+      return <Alert severity="error">{reviewsTabError}</Alert>;
+    }
+    if (!reviewsTabCourses.length) {
+      return <Typography>No courses found for your account.</Typography>;
+    }
+    return (
+      <Grid container spacing={4}>
+        {reviewsTabCourses.map(course => (
+          <Grid item xs={12} md={6} key={course._id}>
+            <Card sx={{ p: 3, borderRadius: 4, boxShadow: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>{course.name}</Typography>
+              {(!course.reviews || !course.reviews.length) ? (
+                <Typography color="text.secondary">No reviews yet.</Typography>
+              ) : (
+                <Box>
+                  {course.reviews.map((review, idx) => (
+                    <Box key={review._id || idx} sx={{ mb: 2, p: 2, bgcolor: '#f9f9f9', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography sx={{ fontWeight: 600, mr: 1 }}>
+                          {review.user?.name || review.user?.email || 'Unknown'}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                          {[...Array(review.rating)].map((_, i) => (
+                            <StarIcon key={i} sx={{ color: '#ffb400', fontSize: 18 }} />
+                          ))}
+                        </Box>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">{review.text}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    );
+  };
+
   const renderList = () => {
     if (tabValue === 3) {
       return renderChapterList();
     }
     if (tabValue === 4) {
       return renderUserManagement();
+    }
+    if (tabValue === 5) {
+      return renderReviewsTab();
     }
     const items = tabValue === 0 ? categories : tabValue === 1 ? subcategories : courses;
     const type = tabValue === 0 ? 'category' : tabValue === 1 ? 'subcategory' : 'course';
@@ -998,13 +1049,25 @@ function AdminDashboard() {
     );
   };
 
+  // Fetch reviews for admin's courses when Reviews tab is selected
+  useEffect(() => {
+    if (tabValue === 5) {
+      setReviewsTabLoading(true);
+      setReviewsTabError('');
+      authAxios.get('/api/courses')
+        .then(res => setReviewsTabCourses(res.data))
+        .catch(err => setReviewsTabError('Failed to fetch courses for reviews'))
+        .finally(() => setReviewsTabLoading(false));
+    }
+  }, [tabValue]);
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" component="h1">
           Admin Dashboard
         </Typography>
-        {tabValue !== 3 && tabValue !== 4 && (
+        {tabValue !== 3 && tabValue !== 4 && tabValue !== 5 && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -1033,6 +1096,7 @@ function AdminDashboard() {
           <Tab label={`Courses (${courses.length})`} />
           <Tab label="Chapters" />
           <Tab label="User Management" />
+          <Tab label="Reviews" />
         </Tabs>
       </Box>
 
