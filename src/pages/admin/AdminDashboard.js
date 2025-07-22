@@ -292,8 +292,8 @@ function AdminDashboard() {
     setFormData({
       name: course.name,
       description: course.description,
-      categoryId: course.categoryId._id,
-      subcategoryId: course.subcategoryId._id,
+      categoryId: course.categoryId?._id || course.categoryId || '',
+      subcategoryId: course.subcategoryId?._id || course.subcategoryId || '',
       thumbnail: course.thumbnail || '',
       chapters: course.chapters,
     });
@@ -316,6 +316,10 @@ function AdminDashboard() {
   };
 
   const handleAddChapter = (course) => {
+    if (!course || !course.chapters) {
+      console.error('No course selected or course has no chapters');
+      return;
+    }
     setSelectedCourse(course);
     setChapterData({
       title: '',

@@ -64,7 +64,7 @@ function Home() {
           {/* Illustration Left */}
           <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', mb: { xs: 4, md: 0 } }}>
             <img
-              src="https://cdn.pixabay.com/photo/2017/01/31/13/14/computer-2025792_1280.png"
+              src="https://img.freepik.com/free-vector/learning-management-system-abstract-concept-illustration-educational-technology-online-learning-delivery-software-application-training-course-tutoring-program-access_335657-3474.jpg"
               alt="Step by step lessons"
               style={{ maxWidth: 340, width: '100%', borderRadius: 24, boxShadow: '0 4px 24px #0001' }}
             />
@@ -89,7 +89,7 @@ function Home() {
           {/* Illustration Right */}
           <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', mb: { xs: 4, md: 0 } }}>
             <img
-              src="https://cdn.pixabay.com/photo/2017/01/31/13/14/computer-2025792_1280.png"
+              src="https://www.sakalnie.in/wp-content/uploads/2023/12/importance-of-experiential-learning-1.jpg"
               alt="Learn By Doing"
               style={{ maxWidth: 340, width: '100%', borderRadius: 24, boxShadow: '0 4px 24px #0001' }}
             />
@@ -131,7 +131,7 @@ function Home() {
           {/* Illustration Right */}
           <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', mb: { xs: 4, md: 0 } }}>
             <img
-              src="https://cdn.pixabay.com/photo/2017/01/31/13/14/computer-2025792_1280.png"
+              src="https://cdn-icons-png.flaticon.com/512/2057/2057748.png"
               alt="Support"
               style={{ maxWidth: 340, width: '100%', borderRadius: 24, boxShadow: '0 4px 24px #0001' }}
             />

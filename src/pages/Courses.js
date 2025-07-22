@@ -134,7 +134,7 @@ function Courses() {
               >
                 <CardMedia
                   component="img"
-                  image={course.thumbnail || 'https://via.placeholder.com/100x100?text=Course'}
+                  image={course.thumbnail || `https://placehold.co/100x100?text=${encodeURIComponent(course.name)}`}
                   alt={course.name}
                   sx={{ width: 80, height: 80, objectFit: 'contain', mb: 2, borderRadius: 2, bgcolor: '#f5f5f5' }}
                 />

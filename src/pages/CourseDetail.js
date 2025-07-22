@@ -52,10 +52,13 @@ function CourseDetail() {
     try {
       const response = await authAxios.get(`/api/courses/${courseId}`);
       setCourse(response.data);
+      // Debug enrolledStudents and user._id
+      console.log('enrolledStudents:', response.data.enrolledStudents);
+      console.log('user._id:', user?._id);
       // Check if user is enrolled
       if (user) {
         const isUserEnrolled = response.data.enrolledStudents?.some(
-          e => e.student._id === user._id
+          e => e.student && String(e.student._id) === String(user._id)
         );
         setIsEnrolled(isUserEnrolled);
       }

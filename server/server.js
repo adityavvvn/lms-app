@@ -644,6 +644,7 @@ app.post('/api/courses/:courseId/enroll', isAuth, async (req, res) => {
 
 // Update progress
 app.post('/api/courses/:courseId/progress', isAuth, async (req, res) => {
+  console.log('Progress API called:', req.params.courseId, req.body, req.user?._id);
   try {
     const { chapterId } = req.body;
     const course = await Course.findById(req.params.courseId);

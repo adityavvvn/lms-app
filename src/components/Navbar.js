@@ -110,16 +110,7 @@ function Navbar() {
             </>
           )}
           {/* Admin-specific right menu */}
-          {user && user.role === 'admin' && (
-            <>
-              <Button component={RouterLink} to="/admin/dashboard" variant="outlined" color="inherit" sx={{ fontWeight: 500, borderRadius: 3, mr: 1 }}>
-                Admin Dashboard
-              </Button>
-              <Button component={RouterLink} to="/admin/dashboard" variant="outlined" color="inherit" sx={{ fontWeight: 500, borderRadius: 3, mr: 1 }}>
-                User Management
-              </Button>
-            </>
-          )}
+          {/* Removed duplicate Admin Dashboard and User Management buttons for admin here */}
           {!user ? (
             <>
               <Button
